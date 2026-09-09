@@ -93,11 +93,15 @@ export const api = {
       if (!found) throw new HttpError("Trayecto no encontrado", 404, null);
       return found;
     },
-    byConductor: (conductorId: string) =>
-      http<Trayecto[]>(
+    byConductor: async (conductorId: string) => {
+      const res = await http<
+        Trayecto[] | { status: string; trayectos: Trayecto[] }
+      >(
         "travels",
         `/api/trayecto/conductor/${encodeURIComponent(conductorId)}`,
-      ),
+      );
+      return Array.isArray(res) ? res : (res?.trayectos ?? []);
+    },
     byEventoId: (eventoId: string) =>
       http<{ status: string; evento_id: string; trayectos: Trayecto[] }>(
         "travels",
@@ -441,7 +445,7 @@ export const api = {
         "notifications",
         "/api/device-tokens/admin/all",
       );
-      return res.devices.filter((d) => d.userId === userId);
+      return (res?.devices ?? []).filter((d) => d.userId === userId);
     },
     remove: (deviceId: string) =>
       http<{ success: boolean }>("notifications", "/api/device-tokens", {

@@ -58,7 +58,9 @@ export default function UserDetailPage() {
 
   const info = userInfoQuery.data?.data;
   const user = userQuery.data;
-  const trayectos = trayectosQuery.data ?? [];
+  const trayectos = Array.isArray(trayectosQuery.data)
+    ? trayectosQuery.data
+    : [];
 
   return (
     <div className="space-y-4">
