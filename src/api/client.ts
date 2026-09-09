@@ -21,6 +21,8 @@ import type {
   Trayecto,
   Usuario,
   UsuarioInfo,
+  WalletConfig,
+  WalletConfigInput,
 } from "./types";
 
 export const api = {
@@ -71,6 +73,36 @@ export const api = {
       http<{ status: string; message: string }>(
         "users",
         `/api/users/${encodeURIComponent(id)}`,
+        { method: "DELETE" },
+      ),
+  },
+
+  // ─── Wallet Config (Users API - Admin) ───
+  walletConfig: {
+    byUserId: (userId: string) =>
+      http<{ status: string; config: WalletConfig }>(
+        "users",
+        `/api/admin/wallet-config/${encodeURIComponent(userId)}`,
+      ),
+    update: (userId: string, data: WalletConfigInput) =>
+      http<{ status: string; message: string; config: WalletConfig }>(
+        "users",
+        `/api/admin/wallet-config/${encodeURIComponent(userId)}`,
+        { method: "PUT", body: JSON.stringify(data) },
+      ),
+    toggle: (userId: string, wallet_enabled: boolean) =>
+      http<{ status: string; message: string; config: WalletConfig }>(
+        "users",
+        `/api/admin/wallet-config/${encodeURIComponent(userId)}/toggle`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ wallet_enabled }),
+        },
+      ),
+    reset: (userId: string) =>
+      http<{ status: string; message: string; config: WalletConfig }>(
+        "users",
+        `/api/admin/wallet-config/${encodeURIComponent(userId)}`,
         { method: "DELETE" },
       ),
   },

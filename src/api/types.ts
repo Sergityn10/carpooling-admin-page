@@ -283,3 +283,28 @@ export type Reserva = {
     img_perfil?: string | null;
   };
 };
+
+export type WalletConfig = {
+  id?: string;
+  user_id: string;
+  wallet_enabled: boolean;
+  recharges_enabled: boolean;
+  payouts_enabled: boolean;
+  payments_enabled: boolean;
+  min_recharge_cents: number;
+  max_recharge_cents: number;
+  max_daily_payout_cents: number;
+  updated_by?: string | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type WalletConfigInput = Partial<{
+  wallet_enabled: boolean;
+  recharges_enabled: boolean;
+  payouts_enabled: boolean;
+  payments_enabled: boolean;
+  min_recharge_cents: number;
+  max_recharge_cents: number;
+  max_daily_payout_cents: number;
+}>;
