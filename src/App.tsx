@@ -5,6 +5,7 @@ import LoginPage from "./pages/LoginPage";
 import UsersPage from "./pages/UsersPage";
 import UserDetailPage from "./pages/UserDetailPage";
 import UserDevicesPage from "./pages/UserDevicesPage";
+import WalletPage from "./pages/WalletPage";
 import TripsPage from "./pages/TripsPage";
 import TripDetailPage from "./pages/TripDetailPage";
 import EventsPage from "./pages/EventsPage";
@@ -32,6 +33,7 @@ export default function App() {
           path="/usuarios/:id/dispositivos"
           element={<UserDevicesPage />}
         />
+        <Route path="/usuarios/:id/monedero" element={<WalletPage />} />
         <Route path="/viajes" element={<TripsPage />} />
         <Route path="/viajes/:id" element={<TripDetailPage />} />
         <Route path="/eventos" element={<EventsPage />} />

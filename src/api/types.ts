@@ -294,6 +294,12 @@ export type WalletConfig = {
   min_recharge_cents: number;
   max_recharge_cents: number;
   max_daily_payout_cents: number;
+  stripe_account_id?: string | null;
+  stripe_customer_id?: string | null;
+  stripe_account_status?: string | null;
+  stripe_account_type?: string | null;
+  wallet_balance_cents?: number;
+  pending_balance_cents?: number;
   updated_by?: string | null;
   created_at?: string;
   updated_at?: string;

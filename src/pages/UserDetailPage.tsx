@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { api } from "../api/client";
-import type { WalletConfig } from "../api/types";
 import Alert from "../components/ui/Alert";
 import { Card, CardSubtitle, CardTitle } from "../components/ui/Card";
 import Stat from "../components/ui/Stat";
@@ -46,37 +45,6 @@ export default function UserDetailPage() {
     enabled: Boolean(id),
   });
 
-  const [walletError, setWalletError] = useState<string | null>(null);
-
-  const updateWalletMutation = useMutation({
-    mutationFn: (data: Partial<WalletConfig>) =>
-      api.walletConfig.update(id!, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallet-config", id] });
-      setWalletError(null);
-    },
-    onError: (err: Error) => setWalletError(err.message),
-  });
-
-  const toggleWalletMutation = useMutation({
-    mutationFn: (wallet_enabled: boolean) =>
-      api.walletConfig.toggle(id!, wallet_enabled),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallet-config", id] });
-      setWalletError(null);
-    },
-    onError: (err: Error) => setWalletError(err.message),
-  });
-
-  const resetWalletMutation = useMutation({
-    mutationFn: () => api.walletConfig.reset(id!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["wallet-config", id] });
-      setWalletError(null);
-    },
-    onError: (err: Error) => setWalletError(err.message),
-  });
-
   const deleteMutation = useMutation({
     mutationFn: (userId: string | number) => api.usuarios.delete(userId),
     onSuccess: () => {
@@ -100,7 +68,6 @@ export default function UserDetailPage() {
     ? trayectosQuery.data
     : [];
   const wallet = walletQuery.data?.config;
-
   return (
     <div className="space-y-4">
       <div>
@@ -216,35 +183,14 @@ export default function UserDetailPage() {
               Configuración del monedero virtual del usuario
             </CardSubtitle>
           </div>
-          {wallet ? (
-            <button
-              onClick={() => {
-                if (
-                  confirm(
-                    "¿Restaurar la configuración del monedero a valores por defecto?",
-                  )
-                ) {
-                  resetWalletMutation.mutate();
-                }
-              }}
-              disabled={resetWalletMutation.isPending}
-              className="flex items-center gap-1.5 rounded-lg border border-panel-200 px-3 py-2 text-sm font-medium text-gray-600 hover:bg-panel-50 disabled:opacity-50"
-            >
-              <RotateCcw size={14} />
-              {resetWalletMutation.isPending
-                ? "Restaurando…"
-                : "Restaurar defaults"}
-            </button>
-          ) : null}
+          <Link
+            to={`/usuarios/${id}/monedero`}
+            className="rounded-lg bg-panel-800 px-3 py-2 text-sm font-medium text-white hover:bg-panel-900"
+          >
+            Ver monedero
+          </Link>
         </div>
-
         <div className="mt-3">
-          {walletError ? (
-            <Alert title="Error" variant="error">
-              {walletError}
-            </Alert>
-          ) : null}
-
           {walletQuery.isLoading ? (
             <Alert>Cargando configuración del monedero…</Alert>
           ) : walletQuery.isError ? (
@@ -252,107 +198,25 @@ export default function UserDetailPage() {
               No se pudo cargar la configuración del monedero.
             </Alert>
           ) : wallet ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg border border-panel-200 p-3">
-                <div>
-                  <div className="text-sm font-medium">Monedero activo</div>
-                  <div className="text-xs text-gray-500">
-                    Switch maestro para activar/desactivar el monedero
-                  </div>
-                </div>
-                <button
-                  onClick={() =>
-                    toggleWalletMutation.mutate(!wallet.wallet_enabled)
-                  }
-                  disabled={toggleWalletMutation.isPending}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    wallet.wallet_enabled ? "bg-green-500" : "bg-gray-300"
-                  } disabled:opacity-50`}
+            <div className="flex flex-wrap gap-4 text-sm">
+              <span>
+                <span className="text-gray-500">Estado:</span>{" "}
+                <span
+                  className={`font-medium ${wallet.wallet_enabled ? "text-green-600" : "text-red-600"}`}
                 >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      wallet.wallet_enabled ? "translate-x-6" : "translate-x-1"
-                    }`}
-                  />
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <WalletToggle
-                  label="Recargas"
-                  description="Permite recargas al monedero"
-                  enabled={wallet.recharges_enabled}
-                  disabled={
-                    !wallet.wallet_enabled || updateWalletMutation.isPending
-                  }
-                  onToggle={() =>
-                    updateWalletMutation.mutate({
-                      recharges_enabled: !wallet.recharges_enabled,
-                    })
-                  }
-                />
-                <WalletToggle
-                  label="Retiros"
-                  description="Permite retiros desde el monedero"
-                  enabled={wallet.payouts_enabled}
-                  disabled={
-                    !wallet.wallet_enabled || updateWalletMutation.isPending
-                  }
-                  onToggle={() =>
-                    updateWalletMutation.mutate({
-                      payouts_enabled: !wallet.payouts_enabled,
-                    })
-                  }
-                />
-                <WalletToggle
-                  label="Pagos"
-                  description="Permite pagos de trayectos desde el monedero"
-                  enabled={wallet.payments_enabled}
-                  disabled={
-                    !wallet.wallet_enabled || updateWalletMutation.isPending
-                  }
-                  onToggle={() =>
-                    updateWalletMutation.mutate({
-                      payments_enabled: !wallet.payments_enabled,
-                    })
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                <WalletLimitInput
-                  label="Recarga mínima (€)"
-                  value={wallet.min_recharge_cents}
-                  disabled={
-                    !wallet.wallet_enabled || updateWalletMutation.isPending
-                  }
-                  onSave={(cents) =>
-                    updateWalletMutation.mutate({ min_recharge_cents: cents })
-                  }
-                />
-                <WalletLimitInput
-                  label="Recarga máxima (€)"
-                  value={wallet.max_recharge_cents}
-                  disabled={
-                    !wallet.wallet_enabled || updateWalletMutation.isPending
-                  }
-                  onSave={(cents) =>
-                    updateWalletMutation.mutate({ max_recharge_cents: cents })
-                  }
-                />
-                <WalletLimitInput
-                  label="Retiro diario máximo (€)"
-                  value={wallet.max_daily_payout_cents}
-                  disabled={
-                    !wallet.wallet_enabled || updateWalletMutation.isPending
-                  }
-                  onSave={(cents) =>
-                    updateWalletMutation.mutate({
-                      max_daily_payout_cents: cents,
-                    })
-                  }
-                />
-              </div>
+                  {wallet.wallet_enabled ? "Activo" : "Desactivado"}
+                </span>
+              </span>
+              <span>
+                <span className="text-gray-500">Saldo:</span>{" "}
+                {wallet.wallet_balance_cents != null
+                  ? `${(wallet.wallet_balance_cents / 100).toFixed(2)}€`
+                  : "-"}
+              </span>
+              <span>
+                <span className="text-gray-500">Stripe:</span>{" "}
+                {wallet.stripe_account_id ? "Conectado" : "No conectado"}
+              </span>
             </div>
           ) : null}
         </div>
@@ -412,111 +276,6 @@ export default function UserDetailPage() {
           {deleteMutation.isPending ? "Eliminando…" : "Eliminar usuario"}
         </button>
       </div>
-    </div>
-  );
-}
-
-function WalletToggle({
-  label,
-  description,
-  enabled,
-  disabled,
-  onToggle,
-}: {
-  label: string;
-  description: string;
-  enabled: boolean;
-  disabled: boolean;
-  onToggle: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between rounded-lg border border-panel-200 p-3">
-      <div>
-        <div className="text-sm font-medium">{label}</div>
-        <div className="text-xs text-gray-500">{description}</div>
-      </div>
-      <button
-        onClick={onToggle}
-        disabled={disabled}
-        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-          enabled ? "bg-green-500" : "bg-gray-300"
-        } disabled:opacity-50`}
-      >
-        <span
-          className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-            enabled ? "translate-x-6" : "translate-x-1"
-          }`}
-        />
-      </button>
-    </div>
-  );
-}
-
-function WalletLimitInput({
-  label,
-  value,
-  disabled,
-  onSave,
-}: {
-  label: string;
-  value: number;
-  disabled: boolean;
-  onSave: (cents: number) => void;
-}) {
-  const [editing, setEditing] = useState(false);
-  const [euroValue, setEuroValue] = useState((value / 100).toFixed(2));
-
-  function handleSave() {
-    const cents = Math.round(parseFloat(euroValue) * 100);
-    if (isNaN(cents) || cents < 0) return;
-    onSave(cents);
-    setEditing(false);
-  }
-
-  return (
-    <div className="rounded-lg border border-panel-200 p-3">
-      <div className="text-sm font-medium">{label}</div>
-      {editing ? (
-        <div className="mt-2 flex items-center gap-2">
-          <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={euroValue}
-            onChange={(e) => setEuroValue(e.target.value)}
-            className="w-24 rounded-lg border border-panel-200 px-2 py-1 text-sm"
-            autoFocus
-          />
-          <button
-            onClick={handleSave}
-            className="rounded-lg bg-panel-800 px-2 py-1 text-xs font-medium text-white hover:bg-panel-900"
-          >
-            Guardar
-          </button>
-          <button
-            onClick={() => {
-              setEuroValue((value / 100).toFixed(2));
-              setEditing(false);
-            }}
-            className="rounded-lg border border-panel-200 px-2 py-1 text-xs text-gray-600 hover:bg-panel-50"
-          >
-            Cancelar
-          </button>
-        </div>
-      ) : (
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-lg font-semibold">
-            {(value / 100).toFixed(2)}€
-          </span>
-          <button
-            onClick={() => setEditing(true)}
-            disabled={disabled}
-            className="text-xs font-medium text-panel-700 hover:underline disabled:opacity-50"
-          >
-            Editar
-          </button>
-        </div>
-      )}
     </div>
   );
 }
