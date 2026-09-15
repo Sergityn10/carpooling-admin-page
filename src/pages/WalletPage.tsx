@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
-import { RotateCcw } from "lucide-react";
+import { ExternalLink, RefreshCw, RotateCcw } from "lucide-react";
 import { api } from "../api/client";
-import type { WalletConfig } from "../api/types";
+import type { Account, AccountUpdateInput, WalletConfig } from "../api/types";
 import Alert from "../components/ui/Alert";
 import { Card, CardSubtitle, CardTitle } from "../components/ui/Card";
 import Stat from "../components/ui/Stat";
@@ -29,6 +29,19 @@ export default function WalletPage() {
     queryKey: ["wallet-config", id],
     queryFn: () => api.walletConfig.byUserId(id!),
     enabled: Boolean(id),
+  });
+
+  const userInfoQuery = useQuery({
+    queryKey: ["usuario-info", id],
+    queryFn: () => api.usuarios.info(id!),
+    enabled: Boolean(id),
+  });
+
+  const accountsQuery = useQuery({
+    queryKey: ["accounts", "user", id],
+    queryFn: () => api.accounts.list({ user_id: id! }),
+    enabled: Boolean(id),
+    retry: false,
   });
 
   const updateWalletMutation = useMutation({
@@ -60,6 +73,75 @@ export default function WalletPage() {
     onError: (err: Error) => setWalletError(err.message),
   });
 
+  const [stripeLink, setStripeLink] = useState<string | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [syncSuccess, setSyncSuccess] = useState<string | null>(null);
+
+  const syncAccountMutation = useMutation({
+    mutationFn: () => api.accounts.sync(id!),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["accounts", "user", id] });
+      setSyncSuccess(data.message);
+      setStripeError(null);
+      setTimeout(() => setSyncSuccess(null), 5000);
+    },
+    onError: (err: Error) => {
+      setStripeError(err.message);
+      setSyncSuccess(null);
+    },
+  });
+
+  const updateAccountMutation = useMutation({
+    mutationFn: ({
+      stripeAccountId,
+      data,
+    }: {
+      stripeAccountId: string;
+      data: AccountUpdateInput;
+    }) => api.accounts.update(stripeAccountId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts", "user", id] });
+      setStripeError(null);
+    },
+    onError: (err: Error) => setStripeError(err.message),
+  });
+
+  const createOnboardingMutation = useMutation({
+    mutationFn: () =>
+      api.stripeConnect.createOnboarding(id!, {
+        return_url: window.location.href,
+        refresh_url: window.location.href,
+      }),
+    onSuccess: (data) => {
+      setStripeLink(data.accountLink.url);
+      setStripeError(null);
+      queryClient.invalidateQueries({ queryKey: ["accounts", "user", id] });
+    },
+    onError: (err: Error) => setStripeError(err.message),
+  });
+
+  const regenerateLinkMutation = useMutation({
+    mutationFn: () =>
+      api.stripeConnect.regenerateLink(id!, {
+        return_url: window.location.href,
+        refresh_url: window.location.href,
+      }),
+    onSuccess: (data) => {
+      setStripeLink(data.accountLink.url);
+      setStripeError(null);
+    },
+    onError: (err: Error) => setStripeError(err.message),
+  });
+
+  const loginLinkMutation = useMutation({
+    mutationFn: () => api.stripeConnect.loginLink(id!),
+    onSuccess: (data) => {
+      setStripeLink(data.loginLink.url);
+      setStripeError(null);
+    },
+    onError: (err: Error) => setStripeError(err.message),
+  });
+
   if (!id) {
     return (
       <Alert title="Error" variant="error">
@@ -70,7 +152,16 @@ export default function WalletPage() {
 
   const user = userQuery.data;
   const wallet = walletQuery.data?.config;
-  const saving = updateWalletMutation.isPending || toggleWalletMutation.isPending;
+  const monedero = userInfoQuery.data?.data?.monedero;
+  const account = accountsQuery.data?.accounts?.[0] ?? null;
+  const saving =
+    updateWalletMutation.isPending || toggleWalletMutation.isPending;
+  const stripeLoading =
+    createOnboardingMutation.isPending ||
+    regenerateLinkMutation.isPending ||
+    loginLinkMutation.isPending ||
+    syncAccountMutation.isPending ||
+    updateAccountMutation.isPending;
 
   return (
     <div className="space-y-4">
@@ -112,9 +203,7 @@ export default function WalletPage() {
             <Stat
               label="Últ. actualización"
               value={
-                wallet.updated_at
-                  ? formatDateTime(wallet.updated_at)
-                  : "-"
+                wallet.updated_at ? formatDateTime(wallet.updated_at) : "-"
               }
             />
           </div>
@@ -217,41 +306,281 @@ export default function WalletPage() {
             </div>
           </Card>
 
-          {/* ─── Stripe ─── */}
+          {/* ─── Cuenta Stripe (modelo Account) ─── */}
           <Card>
-            <CardTitle>Cuenta Stripe</CardTitle>
+            <CardTitle>Cuenta Stripe Connect</CardTitle>
             <CardSubtitle>
-              Información de la cuenta de Stripe del usuario
+              Gestión de la cuenta Stripe del usuario (modelo Account)
             </CardSubtitle>
-            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <InfoRow
-                label="Stripe Account ID"
-                value={wallet.stripe_account_id ?? "-"}
-              />
-              <InfoRow
-                label="Stripe Customer ID"
-                value={wallet.stripe_customer_id ?? "-"}
-              />
-              <InfoRow
-                label="Estado cuenta"
-                value={wallet.stripe_account_status ?? "-"}
-              />
-              <InfoRow
-                label="Tipo de cuenta"
-                value={wallet.stripe_account_type ?? "-"}
-              />
+
+            <div className="mt-3 space-y-4">
+              {stripeError ? (
+                <Alert title="Error Stripe" variant="error">
+                  {stripeError}
+                </Alert>
+              ) : null}
+
+              {syncSuccess ? (
+                <div className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-700">
+                  {syncSuccess}
+                </div>
+              ) : null}
+
+              {stripeLink ? (
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+                  <div className="text-sm font-medium text-blue-900">
+                    Link generado
+                  </div>
+                  <div className="mt-1 break-all text-xs text-blue-700">
+                    {stripeLink}
+                  </div>
+                  <a
+                    href={stripeLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                  >
+                    <ExternalLink size={14} />
+                    Abrir link
+                  </a>
+                </div>
+              ) : null}
+
+              {accountsQuery.isLoading ? (
+                <Alert>Cargando cuenta Stripe…</Alert>
+              ) : accountsQuery.isError || !account ? (
+                <div className="space-y-3">
+                  <div className="rounded-lg border border-panel-200 p-3">
+                    <div className="text-sm text-gray-600">
+                      El usuario no tiene cuenta Stripe Connect registrada en la
+                      base de datos.
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => createOnboardingMutation.mutate()}
+                    disabled={stripeLoading}
+                    className="flex items-center gap-2 rounded-lg bg-panel-800 px-4 py-2 text-sm font-medium text-white hover:bg-panel-900 disabled:opacity-50"
+                  >
+                    <ExternalLink size={16} />
+                    {createOnboardingMutation.isPending
+                      ? "Creando cuenta…"
+                      : "Crear cuenta + onboarding"}
+                  </button>
+
+                  <button
+                    onClick={() => syncAccountMutation.mutate()}
+                    disabled={stripeLoading}
+                    className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                  >
+                    <RefreshCw
+                      size={16}
+                      className={
+                        syncAccountMutation.isPending ? "animate-spin" : ""
+                      }
+                    />
+                    {syncAccountMutation.isPending
+                      ? "Sincronizando…"
+                      : "Sincronizar desde Stripe"}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <InfoRow
+                      label="Stripe Account ID"
+                      value={account.stripe_account_id}
+                    />
+                    <InfoRow label="User ID" value={account.user_id} />
+                    <InfoRow
+                      label="Onboarding"
+                      value={
+                        account.details_submitted ? "Completado" : "Incompleto"
+                      }
+                    />
+                    <InfoRow
+                      label="Cuenta por defecto"
+                      value={account.default_account ? "Sí" : "No"}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <StripeBadge
+                      label="Charges"
+                      enabled={account.charges_enabled}
+                    />
+                    <StripeBadge
+                      label="Transfers"
+                      enabled={account.transfers_enabled}
+                    />
+                    <StripeBadge
+                      label="Details submitted"
+                      enabled={account.details_submitted}
+                    />
+                  </div>
+
+                  {/* ─── Edición manual de flags ─── */}
+                  <div className="rounded-lg border border-panel-200 p-3">
+                    <div className="text-sm font-medium">
+                      Editar flags de la cuenta
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <FlagToggle
+                        label="charges_enabled"
+                        enabled={account.charges_enabled}
+                        disabled={updateAccountMutation.isPending}
+                        onToggle={() =>
+                          updateAccountMutation.mutate({
+                            stripeAccountId: account.stripe_account_id,
+                            data: {
+                              charges_enabled: !account.charges_enabled,
+                            },
+                          })
+                        }
+                      />
+                      <FlagToggle
+                        label="transfers_enabled"
+                        enabled={account.transfers_enabled}
+                        disabled={updateAccountMutation.isPending}
+                        onToggle={() =>
+                          updateAccountMutation.mutate({
+                            stripeAccountId: account.stripe_account_id,
+                            data: {
+                              transfers_enabled: !account.transfers_enabled,
+                            },
+                          })
+                        }
+                      />
+                      <FlagToggle
+                        label="details_submitted"
+                        enabled={account.details_submitted}
+                        disabled={updateAccountMutation.isPending}
+                        onToggle={() =>
+                          updateAccountMutation.mutate({
+                            stripeAccountId: account.stripe_account_id,
+                            data: {
+                              details_submitted: !account.details_submitted,
+                            },
+                          })
+                        }
+                      />
+                      <FlagToggle
+                        label="default_account"
+                        enabled={account.default_account}
+                        disabled={updateAccountMutation.isPending}
+                        onToggle={() =>
+                          updateAccountMutation.mutate({
+                            stripeAccountId: account.stripe_account_id,
+                            data: {
+                              default_account: !account.default_account,
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  {/* ─── Botones de acción ─── */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => syncAccountMutation.mutate()}
+                      disabled={stripeLoading}
+                      className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                    >
+                      <RefreshCw
+                        size={16}
+                        className={
+                          syncAccountMutation.isPending ? "animate-spin" : ""
+                        }
+                      />
+                      {syncAccountMutation.isPending
+                        ? "Sincronizando…"
+                        : "Sincronizar desde Stripe"}
+                    </button>
+
+                    {!account.details_submitted ? (
+                      <button
+                        onClick={() => regenerateLinkMutation.mutate()}
+                        disabled={stripeLoading}
+                        className="flex items-center gap-2 rounded-lg bg-panel-800 px-4 py-2 text-sm font-medium text-white hover:bg-panel-900 disabled:opacity-50"
+                      >
+                        <ExternalLink size={16} />
+                        {regenerateLinkMutation.isPending
+                          ? "Generando…"
+                          : "Regenerar link onboarding"}
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => loginLinkMutation.mutate()}
+                        disabled={stripeLoading}
+                        className="flex items-center gap-2 rounded-lg bg-panel-800 px-4 py-2 text-sm font-medium text-white hover:bg-panel-900 disabled:opacity-50"
+                      >
+                        <ExternalLink size={16} />
+                        {loginLinkMutation.isPending
+                          ? "Generando…"
+                          : "Acceso al dashboard"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
+
+          {/* ─── Info del monedero (desde getUserInfo) ─── */}
+          {monedero ? (
+            <Card>
+              <CardTitle>Estado del monedero</CardTitle>
+              <CardSubtitle>
+                Información en tiempo real desde el backend
+              </CardSubtitle>
+              <div className="mt-3 space-y-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <InfoRow
+                    label="Disponible"
+                    value={monedero.disponible ? "Sí" : "No"}
+                  />
+                  <InfoRow
+                    label="Wallet activa"
+                    value={monedero.wallet_activa ? "Sí" : "No"}
+                  />
+                  <InfoRow
+                    label="Stripe Account"
+                    value={monedero.stripe_account_id ?? "-"}
+                  />
+                  <InfoRow
+                    label="Stripe Customer"
+                    value={monedero.stripe_customer_account ?? "-"}
+                  />
+                </div>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <StripeBadge
+                    label="Charges"
+                    enabled={monedero.charges_enabled}
+                  />
+                  <StripeBadge
+                    label="Transfers"
+                    enabled={monedero.transfers_enabled}
+                  />
+                  <StripeBadge
+                    label="Onboarding"
+                    enabled={monedero.onboarding_completado}
+                  />
+                </div>
+                {monedero.mensaje ? (
+                  <div className="rounded-lg border border-panel-200 bg-panel-50 p-3 text-sm text-gray-700">
+                    {monedero.mensaje}
+                  </div>
+                ) : null}
+              </div>
+            </Card>
+          ) : null}
 
           {/* ─── Metadatos ─── */}
           <Card>
             <CardTitle>Metadatos</CardTitle>
             <CardSubtitle>Información de auditoría</CardSubtitle>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <InfoRow
-                label="Config ID"
-                value={wallet.id ?? "-"}
-              />
+              <InfoRow label="Config ID" value={wallet.id ?? "-"} />
               <InfoRow
                 label="Actualizado por"
                 value={wallet.updated_by ?? "-"}
@@ -348,11 +677,7 @@ function PermissionToggle({
         <div className="text-sm font-medium">{label}</div>
         <div className="text-xs text-gray-500">{description}</div>
       </div>
-      <ToggleSwitch
-        enabled={enabled}
-        disabled={disabled}
-        onToggle={onToggle}
-      />
+      <ToggleSwitch enabled={enabled} disabled={disabled} onToggle={onToggle} />
     </div>
   );
 }
@@ -444,6 +769,56 @@ function InfoRow({ label, value }: { label: string; value: string }) {
     <div className="rounded-lg border border-panel-200 p-3">
       <div className="text-xs text-gray-500">{label}</div>
       <div className="mt-1 break-all text-sm font-medium">{value}</div>
+    </div>
+  );
+}
+
+function StripeBadge({ label, enabled }: { label: string; enabled: boolean }) {
+  return (
+    <div
+      className={`flex items-center justify-between rounded-lg border p-3 ${
+        enabled ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"
+      }`}
+    >
+      <span className="text-sm font-medium">{label}</span>
+      <span
+        className={`text-xs font-semibold ${
+          enabled ? "text-green-700" : "text-red-700"
+        }`}
+      >
+        {enabled ? "✓" : "✗"}
+      </span>
+    </div>
+  );
+}
+
+function FlagToggle({
+  label,
+  enabled,
+  disabled,
+  onToggle,
+}: {
+  label: string;
+  enabled: boolean;
+  disabled: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-panel-200 p-2">
+      <span className="text-xs font-mono text-gray-600">{label}</span>
+      <button
+        onClick={onToggle}
+        disabled={disabled}
+        className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+          enabled ? "bg-green-500" : "bg-gray-300"
+        } disabled:opacity-50`}
+      >
+        <span
+          className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+            enabled ? "translate-x-5" : "translate-x-1"
+          }`}
+        />
+      </button>
     </div>
   );
 }

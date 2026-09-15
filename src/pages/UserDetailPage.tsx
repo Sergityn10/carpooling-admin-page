@@ -17,7 +17,11 @@ export default function UserDetailPage() {
 
   const userInfoQuery = useQuery({
     queryKey: ["usuario-info", id],
-    queryFn: () => api.usuarios.info(id!),
+    queryFn: async () => {
+      const res = await api.usuarios.info(id!);
+      console.log("[DEBUG] userInfo response:", res);
+      return res;
+    },
     enabled: Boolean(id),
   });
 
@@ -29,7 +33,11 @@ export default function UserDetailPage() {
 
   const trayectosQuery = useQuery({
     queryKey: ["trayectos-conductor", id],
-    queryFn: () => api.viajes.byConductor(id!),
+    queryFn: async () => {
+      const res = await api.viajes.byConductor(id!);
+      console.log("[DEBUG] byConductor response:", res, "for id:", id);
+      return res;
+    },
     enabled: Boolean(id),
   });
 
@@ -95,7 +103,7 @@ export default function UserDetailPage() {
       {info ? (
         <>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
-            <Stat label="Viajes" value={info.viajes ?? 0} />
+            <Stat label="Viajes" value={info.viajes ?? trayectos.length ?? 0} />
             <Stat
               label="Valoración media"
               value={info.averageRating?.toFixed(1) ?? "-"}

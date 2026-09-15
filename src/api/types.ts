@@ -24,6 +24,21 @@ export type Usuario = {
   updated_at?: string;
 };
 
+export type Monedero = {
+  disponible: boolean;
+  stripe_account: boolean;
+  stripe_account_id?: string | null;
+  stripe_customer_account?: string | null;
+  onboarding_completado: boolean;
+  charges_enabled: boolean;
+  transfers_enabled: boolean;
+  details_submitted: boolean;
+  wallet_activa: boolean;
+  wallet_balance: number;
+  config?: WalletConfig;
+  mensaje?: string;
+};
+
 export type UsuarioInfo = {
   userId: number;
   name: string;
@@ -38,6 +53,8 @@ export type UsuarioInfo = {
   about_me?: string | null;
   viajes?: number;
   preferences?: Record<string, string>;
+  wallet_config?: WalletConfig;
+  monedero?: Monedero;
 };
 
 // ─── Travels API (https://traveks.youconnext.es) ───
@@ -284,6 +301,39 @@ export type Reserva = {
   };
 };
 
+export type StripeAccountStatus = {
+  status: string;
+  account: {
+    id: string;
+    charges_enabled: boolean;
+    transfers_enabled: boolean;
+    details_submitted: boolean;
+    payouts_enabled: boolean;
+    capabilities?: Record<string, unknown>;
+    requirements?: Record<string, unknown>;
+  };
+  onboarding_ended: boolean;
+};
+
+export type StripeAccountLink = {
+  status: string;
+  message: string;
+  accountLink: {
+    url: string;
+    expires_at: number;
+  };
+  stripe_account_id?: string;
+};
+
+export type StripeLoginLink = {
+  status: string;
+  message: string;
+  loginLink: {
+    url: string;
+    created: number;
+  };
+};
+
 export type WalletConfig = {
   id?: string;
   user_id: string;
@@ -314,3 +364,50 @@ export type WalletConfigInput = Partial<{
   max_recharge_cents: number;
   max_daily_payout_cents: number;
 }>;
+
+// ─── Admin Accounts (Stripe Connect) ───
+
+export type AccountUser = {
+  id: string;
+  email: string;
+  name?: string;
+  surname?: string;
+};
+
+export type Account = {
+  stripe_account_id: string;
+  user_id: string;
+  charges_enabled: boolean;
+  transfers_enabled: boolean;
+  details_submitted: boolean;
+  default_account: boolean;
+  user?: AccountUser;
+};
+
+export type AccountInput = {
+  stripe_account_id: string;
+  user_id: string;
+  charges_enabled?: boolean;
+  transfers_enabled?: boolean;
+  details_submitted?: boolean;
+  default_account?: boolean;
+};
+
+export type AccountUpdateInput = Partial<{
+  charges_enabled: boolean;
+  transfers_enabled: boolean;
+  details_submitted: boolean;
+  default_account: boolean;
+}>;
+
+export type AccountSyncResponse = {
+  status: string;
+  message: string;
+  account: Account;
+  stripe_data: {
+    charges_enabled: boolean;
+    transfers_enabled: boolean;
+    details_submitted: boolean;
+    capabilities?: Record<string, string>;
+  };
+};

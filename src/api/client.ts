@@ -16,6 +16,13 @@ import type {
   RecorridoPunto,
   Reserva,
   ReservaStatus,
+  Account,
+  AccountInput,
+  AccountSyncResponse,
+  AccountUpdateInput,
+  StripeAccountLink,
+  StripeAccountStatus,
+  StripeLoginLink,
   Suggestion,
   Tag,
   Trayecto,
@@ -104,6 +111,98 @@ export const api = {
         "users",
         `/api/admin/wallet-config/${encodeURIComponent(userId)}`,
         { method: "DELETE" },
+      ),
+  },
+
+  // ─── Admin Accounts (Users API - Stripe Connect model) ───
+  accounts: {
+    list: (params?: {
+      limit?: number;
+      offset?: number;
+      charges_enabled?: boolean;
+      transfers_enabled?: boolean;
+      details_submitted?: boolean;
+      user_id?: string;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params) {
+        for (const [k, v] of Object.entries(params)) {
+          if (v !== undefined && v !== null) qs.set(k, String(v));
+        }
+      }
+      const q = qs.toString();
+      return http<{
+        status: string;
+        accounts: Account[];
+        total: number;
+        limit: number;
+        offset: number;
+      }>("users", `/api/admin/accounts${q ? `?${q}` : ""}`);
+    },
+    byId: (stripeAccountId: string) =>
+      http<{ status: string; account: Account }>(
+        "users",
+        `/api/admin/accounts/${encodeURIComponent(stripeAccountId)}`,
+      ),
+    create: (data: AccountInput) =>
+      http<{ status: string; message: string; account: Account }>(
+        "users",
+        "/api/admin/accounts",
+        { method: "POST", body: JSON.stringify(data) },
+      ),
+    update: (stripeAccountId: string, data: AccountUpdateInput) =>
+      http<{ status: string; message: string; account: Account }>(
+        "users",
+        `/api/admin/accounts/${encodeURIComponent(stripeAccountId)}`,
+        { method: "PATCH", body: JSON.stringify(data) },
+      ),
+    delete: (stripeAccountId: string) =>
+      http<{ status: string; message: string }>(
+        "users",
+        `/api/admin/accounts/${encodeURIComponent(stripeAccountId)}`,
+        { method: "DELETE" },
+      ),
+    sync: (userId: string) =>
+      http<AccountSyncResponse>(
+        "users",
+        `/api/admin/accounts/sync/${encodeURIComponent(userId)}`,
+        { method: "POST" },
+      ),
+  },
+
+  // ─── Stripe Connect (Users API - Admin) ───
+  stripeConnect: {
+    getStatus: (userId: string) =>
+      http<StripeAccountStatus>(
+        "users",
+        `/api/admin/stripe-connect/${encodeURIComponent(userId)}`,
+      ),
+    createOnboarding: (
+      userId: string,
+      urls: { return_url: string; refresh_url: string },
+    ) =>
+      http<StripeAccountLink>(
+        "users",
+        `/api/admin/stripe-connect/${encodeURIComponent(userId)}`,
+        { method: "POST", body: JSON.stringify(urls) },
+      ),
+    regenerateLink: (
+      userId: string,
+      urls: { return_url: string; refresh_url: string },
+    ) =>
+      http<StripeAccountLink>(
+        "users",
+        `/api/admin/stripe-connect/${encodeURIComponent(userId)}/account-link`,
+        { method: "POST", body: JSON.stringify(urls) },
+      ),
+    loginLink: (userId: string, returnUrl?: string) =>
+      http<StripeLoginLink>(
+        "users",
+        `/api/admin/stripe-connect/${encodeURIComponent(userId)}/login-link`,
+        {
+          method: "POST",
+          body: JSON.stringify(returnUrl ? { return_url: returnUrl } : {}),
+        },
       ),
   },
 
