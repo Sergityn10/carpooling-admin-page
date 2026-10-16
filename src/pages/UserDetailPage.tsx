@@ -76,12 +76,16 @@ export default function UserDetailPage() {
     ? trayectosQuery.data
     : [];
   const wallet = walletQuery.data?.config;
+
+  const displayName =
+    [user?.name, user?.surname].filter(Boolean).join(" ").trim() ||
+    user?.email ||
+    `Usuario #${id}`;
+
   return (
     <div className="space-y-4">
       <div>
-        <div className="text-lg font-semibold">
-          {user?.name ?? "Usuario"} {user?.surname ?? ""}
-        </div>
+        <div className="text-lg font-semibold">{displayName}</div>
         <div className="text-sm text-gray-600">{user?.email ?? "-"}</div>
       </div>
 
@@ -270,7 +274,7 @@ export default function UserDetailPage() {
           onClick={() => {
             if (
               confirm(
-                `¿Eliminar a ${user?.name ?? "este usuario"} ${user?.surname ?? ""}? Esta acción no se puede deshacer.`,
+                `¿Eliminar a "${displayName}"? Esta acción no se puede deshacer.`,
               )
             ) {
               setDeleteError(null);
