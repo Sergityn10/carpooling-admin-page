@@ -197,26 +197,35 @@ export default function EventDetailPage() {
             </div>
           </Card>
 
-          {event.company ? (
+          {event.enterprise || event.company ? (
             <Card>
-              <CardTitle>Empresa</CardTitle>
-              <CardSubtitle>Organizadora del evento</CardSubtitle>
+              <CardTitle>Entidad Organizadora</CardTitle>
+              <CardSubtitle>Organización o empresa del evento</CardSubtitle>
               <div className="mt-2 text-sm">
-                <Link
-                  to={`/empresas/${event.company.id}`}
-                  className="text-panel-800 underline"
-                >
-                  {event.company.name}
-                </Link>
-                {event.company.website ? (
+                {event.enterprise ? (
+                  <Link
+                    to={`/organizaciones/${event.enterprise.id}`}
+                    className="font-medium text-panel-800 underline"
+                  >
+                    {event.enterprise.name}
+                  </Link>
+                ) : event.company ? (
+                  <Link
+                    to={`/organizaciones/${event.company.id}`}
+                    className="font-medium text-panel-800 underline"
+                  >
+                    {event.company.name}
+                  </Link>
+                ) : null}
+                {(event.enterprise?.website || event.company?.website) ? (
                   <div className="mt-1 text-gray-600">
                     <a
-                      href={event.company.website}
+                      href={event.enterprise?.website || event.company?.website || "#"}
                       target="_blank"
                       rel="noreferrer"
                       className="underline"
                     >
-                      {event.company.website}
+                      {event.enterprise?.website || event.company?.website}
                     </a>
                   </div>
                 ) : null}
@@ -250,7 +259,8 @@ function EventEditForm({
 }) {
   const [form, setForm] = useState<EventInput>({
     name: event.name,
-    company_id: event.company_id,
+    company_id: event.company_id ?? undefined,
+    enterprise_id: event.enterprise_id ?? undefined,
     start_date: event.start_date ?? "",
     end_date: event.end_date ?? "",
     description: event.description ?? "",

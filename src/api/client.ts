@@ -8,6 +8,10 @@ import type {
   CompanyInput,
   Comentario,
   DeviceToken,
+  Enterprise,
+  EnterpriseCreateInput,
+  EnterpriseUpdateInput,
+  EnterpriseMetrics,
   EventInput,
   EventoTrayecto,
   InfoCAE,
@@ -28,6 +32,8 @@ import type {
   Trayecto,
   Usuario,
   UsuarioInfo,
+  UserCreateInput,
+  UserUpdateInput,
   WalletConfig,
   WalletConfigInput,
 } from "./types";
@@ -75,6 +81,67 @@ export const api = {
       http<{ status: string; message: string; data: UsuarioInfo }>(
         "users",
         `/api/users/${encodeURIComponent(id)}/info`,
+      ),
+    create: async (data: UserCreateInput) => {
+      // 1. Consentimientos legales requeridos por la API (/api/auth/register)
+      const consents = {
+        privacy_policy_accepted: data.consents?.privacy_policy_accepted ?? true,
+        terms_of_service_accepted: data.consents?.terms_of_service_accepted ?? true,
+        marketing_accepted: data.consents?.marketing_accepted ?? false,
+        privacy_version: data.consents?.privacy_version ?? "v1.0",
+        terms_version: data.consents?.terms_version ?? "v1.0",
+      };
+
+      // 2. Registro obligatorio (email, password y consentimientos legales) usando credentials: 'omit' para no sobreescribir la sesión del admin
+      const res = await http<{
+        status: string;
+        message: string;
+        userId: number;
+        token: string;
+      }>("users", "/api/auth/register", {
+        method: "POST",
+        credentials: "omit",
+        body: JSON.stringify({
+          email: data.email.trim(),
+          password: data.password,
+          consents,
+        }),
+      });
+
+      // 3. Si se suministran campos de perfil iniciales opcionales, completamos la ficha
+      const { email: _e, password: _p, consents: _c, ...profileFields } = data;
+      const cleanProfile: Record<string, any> = {};
+      for (const [k, v] of Object.entries(profileFields)) {
+        if (v !== undefined && v !== "") {
+          cleanProfile[k] = v;
+        }
+      }
+
+      if (Object.keys(cleanProfile).length > 0 && res.userId) {
+        try {
+          await http<{ status: string; message: string }>(
+            "users",
+            `/api/users/${encodeURIComponent(res.userId)}`,
+            {
+              method: "PATCH",
+              body: JSON.stringify(cleanProfile),
+            },
+          );
+        } catch (updateErr) {
+          console.warn("[api.usuarios.create] Usuario creado pero falló actualizar perfil inicial:", updateErr);
+        }
+      }
+
+      return res;
+    },
+    update: (id: string | number, data: UserUpdateInput) =>
+      http<{ status: string; message: string }>(
+        "users",
+        `/api/users/${encodeURIComponent(id)}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(data),
+        },
       ),
     delete: (id: string | number) =>
       http<{ status: string; message: string }>(
@@ -490,6 +557,80 @@ export const api = {
         `/api/tags/${encodeURIComponent(id)}`,
         { method: "DELETE" },
       ),
+  },
+
+  // ─── Organizaciones / Enterprises (Users API - Admin B2B) ───
+  organizaciones: {
+    list: (params?: {
+      search?: string;
+      status?: "all" | "active" | "inactive" | "deleted" | "verified" | string;
+      includeDeleted?: boolean;
+      page?: number;
+      limit?: number;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.search) qs.set("search", params.search);
+      if (params?.status) qs.set("status", params.status);
+      if (params?.includeDeleted) qs.set("includeDeleted", "true");
+      if (params?.page) qs.set("page", String(params.page));
+      if (params?.limit) qs.set("limit", String(params.limit));
+      const query = qs.toString();
+      return http<{
+        status: string;
+        enterprises: Enterprise[];
+        pagination: Pagination;
+      }>("users", `/api/admin/enterprises${query ? `?${query}` : ""}`);
+    },
+    metrics: () =>
+      http<{
+        status: string;
+        metrics: EnterpriseMetrics;
+      }>("users", "/api/admin/enterprises/metrics"),
+    byId: (id: string) =>
+      http<{
+        status: string;
+        enterprise: Enterprise;
+      }>("users", `/api/enterprises/${encodeURIComponent(id)}`),
+    create: (data: EnterpriseCreateInput) =>
+      http<{
+        status: string;
+        message: string;
+        enterprise: Enterprise;
+      }>("users", "/api/admin/enterprises", {
+        method: "POST",
+        body: JSON.stringify(data),
+      }),
+    update: (id: string, data: EnterpriseUpdateInput) =>
+      http<{
+        status: string;
+        message: string;
+        enterprise: Enterprise;
+      }>("users", `/api/enterprises/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+    softDelete: (id: string) =>
+      http<{
+        status: string;
+        message: string;
+      }>("users", `/api/admin/enterprises/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      }),
+    restore: (id: string) =>
+      http<{
+        status: string;
+        message: string;
+      }>("users", `/api/admin/enterprises/${encodeURIComponent(id)}/restore`, {
+        method: "PATCH",
+      }),
+    resetPassword: (id: string, new_password: string) =>
+      http<{
+        status: string;
+        message: string;
+      }>("users", `/api/admin/enterprises/${encodeURIComponent(id)}/password`, {
+        method: "PATCH",
+        body: JSON.stringify({ new_password }),
+      }),
   },
 
   // ─── Companies (Users API) ───

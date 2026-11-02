@@ -17,6 +17,7 @@ function matchesEvent(e: PlatformEvent, q: string) {
   return (
     e.name.toLowerCase().includes(query) ||
     (e.unique_code ?? "").toLowerCase().includes(query) ||
+    (e.enterprise?.name ?? "").toLowerCase().includes(query) ||
     (e.company?.name ?? "").toLowerCase().includes(query) ||
     (e.description ?? "").toLowerCase().includes(query)
   );
@@ -30,6 +31,11 @@ export default function EventsPage() {
   const eventsQuery = useQuery({
     queryKey: ["eventos"],
     queryFn: () => api.eventos.list({ limit: 100 }),
+  });
+
+  const organizationsQuery = useQuery({
+    queryKey: ["organizaciones-for-events"],
+    queryFn: () => api.organizaciones.list({ limit: 100 }),
   });
 
   const companiesQuery = useQuery({
@@ -52,6 +58,9 @@ export default function EventsPage() {
     return arr.filter((e) => matchesEvent(e, q));
   }, [eventsQuery.data, q]);
 
+  const organizations = organizationsQuery.data?.enterprises ?? [];
+  const companies = companiesQuery.data?.companies ?? [];
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -71,7 +80,8 @@ export default function EventsPage() {
 
       {showCreate ? (
         <EventCreateForm
-          companies={companiesQuery.data?.companies ?? []}
+          organizations={organizations}
+          companies={companies}
           tags={tagsQuery.data?.tags ?? []}
           onCreated={() => {
             setShowCreate(false);
@@ -85,7 +95,7 @@ export default function EventsPage() {
           <div>
             <CardTitle>Buscar</CardTitle>
             <CardSubtitle>
-              Filtra por nombre, código, empresa o descripción
+              Filtra por nombre, código, empresa u organización
             </CardSubtitle>
           </div>
           <div className="w-80 max-w-full">
@@ -112,7 +122,7 @@ export default function EventsPage() {
           <thead>
             <tr>
               <Th>Nombre</Th>
-              <Th>Empresa</Th>
+              <Th>Organizador</Th>
               <Th>Código</Th>
               <Th>Etiquetas</Th>
               <Th className="text-right">Creado</Th>
@@ -139,7 +149,7 @@ export default function EventsPage() {
                     </Link>
                   </div>
                 </Td>
-                <Td>{e.company?.name ?? "-"}</Td>
+                <Td>{e.enterprise?.name ?? e.company?.name ?? "-"}</Td>
                 <Td>
                   <code className="rounded bg-panel-100 px-1.5 py-0.5 text-xs">
                     {e.unique_code}
@@ -189,18 +199,20 @@ export default function EventsPage() {
 }
 
 function EventCreateForm({
+  organizations,
   companies,
   tags,
   onCreated,
 }: {
+  organizations: { id: string; name: string }[];
   companies: { id: string; name: string }[];
   tags: { id: number; name: string }[];
   onCreated: () => void;
 }) {
   const queryClient = useQueryClient();
+  const [selectedEntity, setSelectedEntity] = useState<string>("");
   const [form, setForm] = useState<EventInput>({
     name: "",
-    company_id: "",
     start_date: "",
     end_date: "",
     description: "",
@@ -225,9 +237,18 @@ function EventCreateForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!selectedEntity) {
+      setError("Debes seleccionar una entidad organizadora para el evento.");
+      return;
+    }
+
+    const [type, entityId] = selectedEntity.split(":");
+
     const payload: EventInput = {
       name: form.name,
-      company_id: form.company_id,
+      company_id: type === "company" ? entityId : undefined,
+      enterprise_id: type === "enterprise" ? entityId : undefined,
       description: form.description || undefined,
       url: form.url || undefined,
       ticket_url: form.ticket_url || undefined,
@@ -255,19 +276,32 @@ function EventCreateForm({
           />
         </div>
         <div>
-          <label className="text-xs font-medium text-gray-600">Empresa *</label>
+          <label className="text-xs font-medium text-gray-600">Entidad Organizadora *</label>
           <select
-            value={form.company_id}
-            onChange={(e) => setForm({ ...form, company_id: e.target.value })}
+            value={selectedEntity}
+            onChange={(e) => setSelectedEntity(e.target.value)}
             required
             className="w-full rounded-lg border border-panel-200 bg-white px-3 py-2 text-sm"
           >
-            <option value="">Selecciona una empresa…</option>
-            {companies.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
+            <option value="">Selecciona una entidad organizadora…</option>
+            {organizations.length > 0 ? (
+              <optgroup label="Organizaciones (B2B)">
+                {organizations.map((o) => (
+                  <option key={`enterprise:${o.id}`} value={`enterprise:${o.id}`}>
+                    {o.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
+            {companies.length > 0 ? (
+              <optgroup label="Empresas (Legacy)">
+                {companies.map((c) => (
+                  <option key={`company:${c.id}`} value={`company:${c.id}`}>
+                    {c.name}
+                  </option>
+                ))}
+              </optgroup>
+            ) : null}
           </select>
         </div>
         <div>

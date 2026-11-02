@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import LoginPage from "./pages/LoginPage";
@@ -10,10 +10,15 @@ import TripsPage from "./pages/TripsPage";
 import TripDetailPage from "./pages/TripDetailPage";
 import EventsPage from "./pages/EventsPage";
 import EventDetailPage from "./pages/EventDetailPage";
-import CompaniesPage from "./pages/CompaniesPage";
-import CompanyDetailPage from "./pages/CompanyDetailPage";
+import OrganizationsPage from "./pages/OrganizationsPage";
+import OrganizationDetailPage from "./pages/OrganizationDetailPage";
 import SuggestionsPage from "./pages/SuggestionsPage";
 import CaesPage from "./pages/CaesPage";
+
+function LegacyCompanyRedirect() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/organizaciones/${id}` : "/organizaciones"} replace />;
+}
 
 export default function App() {
   return (
@@ -38,8 +43,15 @@ export default function App() {
         <Route path="/viajes/:id" element={<TripDetailPage />} />
         <Route path="/eventos" element={<EventsPage />} />
         <Route path="/eventos/:id" element={<EventDetailPage />} />
-        <Route path="/empresas" element={<CompaniesPage />} />
-        <Route path="/empresas/:id" element={<CompanyDetailPage />} />
+
+        {/* Organizaciones (B2B Ecosistema) */}
+        <Route path="/organizaciones" element={<OrganizationsPage />} />
+        <Route path="/organizaciones/:id" element={<OrganizationDetailPage />} />
+
+        {/* Redirecciones retrocompatibles */}
+        <Route path="/empresas" element={<Navigate to="/organizaciones" replace />} />
+        <Route path="/empresas/:id" element={<LegacyCompanyRedirect />} />
+
         <Route path="/sugerencias" element={<SuggestionsPage />} />
         <Route path="/caes" element={<CaesPage />} />
       </Route>

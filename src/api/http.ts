@@ -105,9 +105,9 @@ async function rawFetch<T>(
   const timeoutId = setTimeout(() => controller.abort(), 15000);
   try {
     const res = await fetch(`${getBaseUrl(api)}${path}`, {
+      credentials: "include",
       ...init,
       signal: controller.signal,
-      credentials: "include",
       headers: {
         ...(init?.headers ?? {}),
         "Content-Type": "application/json",
@@ -151,9 +151,9 @@ async function rawFetchBlob(
   const timeoutId = setTimeout(() => controller.abort(), 60000);
   try {
     const res = await fetch(`${getBaseUrl(api)}${path}`, {
+      credentials: "include",
       ...init,
       signal: controller.signal,
-      credentials: "include",
       headers: {
         ...(init?.headers ?? {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

@@ -24,6 +24,43 @@ export type Usuario = {
   updated_at?: string;
 };
 
+export type UserCreateInput = {
+  email: string;
+  password: string;
+  name?: string;
+  surname?: string;
+  phone?: string;
+  role?: string;
+  dni?: string;
+  ciudad?: string;
+  provincia?: string;
+  consents?: {
+    privacy_policy_accepted: boolean;
+    terms_of_service_accepted: boolean;
+    marketing_accepted?: boolean;
+    privacy_version?: string;
+    terms_version?: string;
+  };
+};
+
+export type UserUpdateInput = {
+  name?: string;
+  surname?: string;
+  email?: string;
+  phone?: string;
+  dni?: string;
+  password?: string;
+  fecha_nacimiento?: string;
+  genero?: string;
+  ciudad?: string;
+  provincia?: string;
+  codigo_postal?: string;
+  direccion?: string;
+  pais?: string;
+  role?: string;
+  about_me?: string;
+};
+
 export type Monedero = {
   disponible: boolean;
   stripe_account: boolean;
@@ -139,6 +176,97 @@ export type Company = {
   _count?: { events: number };
 };
 
+export type Enterprise = {
+  id: string;
+  name: string;
+  email: string;
+  description?: string | null;
+  location?: string | null;
+  phone?: string | null;
+  cif?: string | null;
+  website?: string | null;
+  logo?: string | null;
+  contact_person?: string | null;
+  sector?: string | null;
+  employee_count?: number | null;
+  address_line1?: string | null;
+  address_line2?: string | null;
+  city?: string | null;
+  province?: string | null;
+  postal_code?: string | null;
+  country?: string;
+  verified: boolean;
+  is_active: boolean;
+  is_deleted: boolean;
+  deleted_at?: string | null;
+  role_id: number;
+  created_at: string;
+  updated_at: string;
+  serviceEventsCount?: number;
+  platformEventsCount?: number;
+  serviceEvents?: any[];
+  platformEvents?: PlatformEvent[];
+  role?: { id: number; name: string };
+  _count?: {
+    serviceEvents?: number;
+    platformEvents?: number;
+    events?: number;
+  };
+};
+
+export type EnterpriseCreateInput = {
+  name: string;
+  email: string;
+  password: string;
+  description: string;
+  location: string;
+  phone?: string;
+  cif?: string;
+  website?: string;
+  logo?: string;
+  contact_person?: string;
+  sector?: string;
+  employee_count?: number;
+  address_line1?: string;
+  address_line2?: string;
+  city?: string;
+  province?: string;
+  postal_code?: string;
+  country?: string;
+  verified?: boolean;
+  is_active?: boolean;
+};
+
+export type EnterpriseUpdateInput = Partial<{
+  name: string;
+  email: string;
+  description: string;
+  location: string;
+  phone: string;
+  cif: string;
+  website: string;
+  logo: string;
+  contact_person: string;
+  sector: string;
+  employee_count: number;
+  address_line1: string;
+  address_line2: string;
+  city: string;
+  province: string;
+  postal_code: string;
+  country: string;
+  verified: boolean;
+  is_active: boolean;
+}>;
+
+export type EnterpriseMetrics = {
+  totalEnterprises: number;
+  activeEnterprises: number;
+  deletedEnterprises: number;
+  verifiedEnterprises: number;
+  totalEventsByEnterprises: number;
+};
+
 export type EventTag = {
   tag: Tag;
 };
@@ -156,7 +284,8 @@ export type CompanyRef = {
 export type PlatformEvent = {
   id: string;
   name: string;
-  company_id: string;
+  company_id?: string | null;
+  enterprise_id?: string | null;
   latitude?: string | number | null;
   longitude?: string | number | null;
   image?: string | null;
@@ -169,12 +298,14 @@ export type PlatformEvent = {
   created_at?: string;
   updated_at?: string;
   company?: CompanyRef;
+  enterprise?: CompanyRef;
   tags?: EventTag[];
 };
 
 export type EventInput = {
   name: string;
-  company_id: string;
+  company_id?: string;
+  enterprise_id?: string;
   latitude?: number;
   longitude?: number;
   image?: string;

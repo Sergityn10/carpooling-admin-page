@@ -81,7 +81,7 @@ export default function Layout() {
             </NavLink>
 
             <NavLink
-              to="/empresas"
+              to="/organizaciones"
               className={({ isActive }) =>
                 clsx(
                   navItemBase,
@@ -91,7 +91,7 @@ export default function Layout() {
               }
             >
               <Building2 size={16} />
-              Empresas
+              Organizaciones
             </NavLink>
 
             <NavLink
