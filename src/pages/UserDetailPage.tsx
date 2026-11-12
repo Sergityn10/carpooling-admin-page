@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { KeyRound, Pencil, Trash2 } from "lucide-react";
+import { Bell, KeyRound, Pencil, Trash2 } from "lucide-react";
 import { api } from "../api/client";
 import type { UserUpdateInput, Usuario, UsuarioInfo } from "../api/types";
 import Alert from "../components/ui/Alert";
@@ -314,7 +314,18 @@ export default function UserDetailPage() {
           <div className="text-lg font-semibold">{displayName}</div>
           <div className="text-sm text-gray-600">{user?.email ?? "-"}</div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            to={`/notificaciones?${new URLSearchParams({
+              userId: String(id),
+              ...(user?.email ? { email: user.email } : {}),
+              ...(displayName ? { name: displayName } : {}),
+            }).toString()}`}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-panel-200 bg-white px-3 py-2 text-sm font-medium text-panel-900 hover:bg-panel-50 transition-colors"
+          >
+            <Bell size={16} />
+            <span>Enviar notificación</span>
+          </Link>
           <button
             type="button"
             onClick={() => setEditing((v) => !v)}

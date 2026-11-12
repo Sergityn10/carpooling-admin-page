@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useParams } from "react-router-dom";
+import { Bell } from "lucide-react";
 import { api } from "../api/client";
 import Alert from "../components/ui/Alert";
 import { Card, CardSubtitle, CardTitle } from "../components/ui/Card";
@@ -41,11 +42,26 @@ export default function UserDevicesPage() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <div className="text-lg font-semibold">
-          Dispositivos de {user?.name ?? "usuario"} {user?.surname ?? ""}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <div className="text-lg font-semibold">
+            Dispositivos de {user?.name ?? "usuario"} {user?.surname ?? ""}
+          </div>
+          <div className="text-sm text-gray-600">{user?.email ?? "-"}</div>
         </div>
-        <div className="text-sm text-gray-600">{user?.email ?? "-"}</div>
+        <Link
+          to={`/notificaciones?${new URLSearchParams({
+            userId: String(id),
+            ...(user?.email ? { email: user.email } : {}),
+            ...(user?.name
+              ? { name: `${user.name} ${user.surname ?? ""}`.trim() }
+              : {}),
+          }).toString()}`}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-panel-200 bg-white px-3 py-2 text-sm font-medium text-panel-900 hover:bg-panel-50 transition-colors"
+        >
+          <Bell size={16} />
+          <span>Enviar notificación</span>
+        </Link>
       </div>
 
       <Card>

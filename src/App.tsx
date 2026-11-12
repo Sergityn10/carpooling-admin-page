@@ -14,6 +14,7 @@ import OrganizationsPage from "./pages/OrganizationsPage";
 import OrganizationDetailPage from "./pages/OrganizationDetailPage";
 import SuggestionsPage from "./pages/SuggestionsPage";
 import CaesPage from "./pages/CaesPage";
+import NotificationsPage from "./pages/NotificationsPage";
 
 function LegacyCompanyRedirect() {
   const { id } = useParams();
@@ -54,6 +55,7 @@ export default function App() {
 
         <Route path="/sugerencias" element={<SuggestionsPage />} />
         <Route path="/caes" element={<CaesPage />} />
+        <Route path="/notificaciones" element={<NotificationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>

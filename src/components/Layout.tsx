@@ -1,6 +1,6 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import {
-  Car,
+  Bell,
   Calendar,
   Building2,
   FileCheck,
@@ -28,12 +28,14 @@ export default function Layout() {
     <div className="min-h-screen">
       <div className="flex min-h-screen">
         <aside className="w-64 border-r border-panel-200 bg-white">
-          <div className="flex items-center gap-2 border-b border-panel-200 px-4 py-4">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-panel-800 text-white">
-              <Car size={18} />
-            </div>
+          <div className="flex items-center gap-2.5 border-b border-panel-200 px-4 py-3.5">
+            <img
+              src="/logo.png"
+              alt="YouConnext"
+              className="h-9 w-9 object-contain"
+            />
             <div className="leading-tight">
-              <div className="text-sm font-semibold">YouConnext</div>
+              <div className="text-sm font-semibold text-panel-950">YouConnext</div>
               <div className="text-xs text-gray-500">Admin</div>
             </div>
           </div>
@@ -120,6 +122,20 @@ export default function Layout() {
             >
               <FileCheck size={16} />
               Informes CAE
+            </NavLink>
+
+            <NavLink
+              to="/notificaciones"
+              className={({ isActive }) =>
+                clsx(
+                  navItemBase,
+                  isActive ? "bg-panel-100 text-panel-900" : "text-gray-700",
+                  "mt-1",
+                )
+              }
+            >
+              <Bell size={16} />
+              Notificaciones
             </NavLink>
           </nav>
 

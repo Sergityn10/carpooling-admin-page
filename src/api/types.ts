@@ -542,3 +542,284 @@ export type AccountSyncResponse = {
     capabilities?: Record<string, string>;
   };
 };
+
+// ─── Admin Notifications (Notifications API) ───
+
+export type NotificationChannel = "email" | "push";
+export type NotificationTargetType = "all" | "single" | "users" | "filter";
+export type NotificationPlatform = "all" | "ios" | "android" | "web";
+export type NotificationPriority = "high" | "normal";
+export type NotificationDispatchStatus =
+  | "queued"
+  | "completed"
+  | "partial"
+  | "failed"
+  | "dry_run";
+
+export type AdminNotificationTarget = {
+  type: NotificationTargetType;
+  userId?: string;
+  email?: string;
+  name?: string;
+  token?: string;
+  userIds?: string[];
+  emails?: string[];
+  tokens?: string[];
+  role?: string;
+  platform?: NotificationPlatform | string;
+  fallbackToDeviceTokens?: boolean;
+};
+
+export type AdminNotificationStatusResponse = {
+  success?: boolean;
+  overallStatus: "healthy" | "degraded" | "unhealthy" | string;
+  service: {
+    name: string;
+    version: string;
+    environment: string;
+    uptimeSeconds: number;
+    runWorkers: boolean;
+    timestamp: string;
+    memory?: {
+      rssMb: number;
+      heapUsedMb: number;
+      heapTotalMb: number;
+    };
+  };
+  checks: {
+    database: { ok: boolean; latencyMs?: number; error?: string };
+    smtp: {
+      ok: boolean;
+      configured: boolean;
+      latencyMs?: number;
+      host?: string | null;
+      port?: number;
+      fromEmail?: string | null;
+      error?: string;
+    };
+    firebase: {
+      ok: boolean;
+      configured: boolean;
+      initialized?: boolean;
+      projectId?: string | null;
+      error?: string;
+    };
+    rabbitmq: {
+      configured: boolean;
+      mode: string;
+      deliveryQueueConnected: boolean;
+      domainConsumer?: {
+        connected?: boolean;
+        [key: string]: unknown;
+      };
+    };
+    userService: {
+      configured: boolean;
+      url?: string | null;
+      batchPath?: string;
+      listPath?: string;
+      allowDeviceEmailFallback?: boolean;
+      health?: {
+        ok: boolean;
+        statusCode?: number;
+        error?: string;
+      };
+    };
+  };
+  queues?: {
+    circuitBreakers?: Record<
+      string,
+      {
+        isOpen?: boolean;
+        failures?: number;
+        lastFailureAt?: string | null;
+        [key: string]: unknown;
+      }
+    >;
+    [key: string]: unknown;
+  };
+  deviceTokens?: {
+    total?: number;
+    active?: number;
+    inactive?: number;
+    uniqueActiveUsers?: number;
+    byPlatform?: Record<string, number>;
+    byRole?: Record<string, number>;
+    error?: string;
+  };
+  adminActivity?: {
+    recentDispatchesCount: number;
+    lastDispatchAt: string | null;
+  };
+  issues: string[];
+};
+
+export type AdminRecipientItem = {
+  id: string;
+  userId: string;
+  email: string | null;
+  role: string | null;
+  platform: string | null;
+  deviceId: string | null;
+  deviceName: string | null;
+  active: boolean;
+  lastUsedAt: string | null;
+  createdAt: string;
+};
+
+export type AdminRecipientsResponse = {
+  success: boolean;
+  items: AdminRecipientItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+};
+
+export type AdminPreviewResponse = {
+  success: boolean;
+  target: AdminNotificationTarget;
+  preview: {
+    push?: {
+      available: boolean;
+      totalDevices: number;
+      uniqueUsers?: number;
+      byPlatform?: Record<string, number>;
+      recipientSource?: string;
+      error?: string;
+    };
+    email?: {
+      available: boolean;
+      totalRecipients: number;
+      recipientSource?: string;
+      sampleRecipients?: Array<{ userId: string; email: string }>;
+      error?: string;
+    };
+  };
+};
+
+export type EmailTemplateMeta = {
+  name: string;
+  subject: string;
+};
+
+export type NotificationCatalogItem = {
+  type: string;
+  description: string;
+  channels: NotificationChannel[];
+  requiredFields: string[];
+  sharedRequiredFields: string[];
+  emailTemplate: string | null;
+  pushTemplate: string | null;
+};
+
+export type AdminEmailContentInput = {
+  template?: string;
+  data?: Record<string, string | number | boolean>;
+  subject?: string;
+  title?: string;
+  message?: string;
+  ctaText?: string;
+  ctaUrl?: string;
+};
+
+export type AdminPushContentInput = {
+  template?: string;
+  title?: string;
+  body?: string;
+  data?: Record<string, string>;
+  priority?: NotificationPriority;
+  channelId?: string;
+  badge?: number;
+};
+
+export type AdminEmailPayload = AdminEmailContentInput & {
+  target: AdminNotificationTarget | "all" | "todos";
+  sync?: boolean;
+  dryRun?: boolean;
+  priority?: NotificationPriority;
+};
+
+export type AdminPushPayload = AdminPushContentInput & {
+  target: AdminNotificationTarget | "all" | "todos";
+  sync?: boolean;
+  dryRun?: boolean;
+};
+
+export type AdminMultiChannelPayload = {
+  target: AdminNotificationTarget | "all" | "todos";
+  channels: NotificationChannel[];
+  email?: AdminEmailContentInput;
+  push?: AdminPushContentInput;
+  sync?: boolean;
+  dryRun?: boolean;
+};
+
+export type AdminSyncDeliveryItemResult = {
+  to?: string;
+  userId?: string;
+  tokenPreview?: string;
+  success: boolean;
+  messageId?: string;
+  errorCode?: string;
+  error?: string;
+};
+
+export type AdminChannelResult = {
+  success: boolean;
+  mode?: "sync" | "async" | "dry_run" | string;
+  dryRun?: boolean;
+  status?: NotificationDispatchStatus | string;
+  message?: string;
+  batchId?: string;
+  channel?: NotificationChannel;
+  recipientSource?: string;
+  recipientsCount?: number;
+  totalDevices?: number;
+  uniqueUsers?: number;
+  byPlatform?: Record<string, number>;
+  jobsQueued?: number;
+  queueType?: string;
+  total?: number;
+  succeeded?: number;
+  failed?: number;
+  sampleRecipients?: Array<{ userId?: string; email: string; name?: string }>;
+  sampleTokens?: string[];
+  results?: AdminSyncDeliveryItemResult[];
+  code?: string;
+  error?: string;
+};
+
+export type AdminDispatchResult = AdminChannelResult & {
+  channels?: Partial<Record<NotificationChannel, AdminChannelResult>>;
+};
+
+export type AdminHistoryItem = {
+  batchId: string;
+  kind: "email" | "push" | "multi" | string;
+  mode: "sync" | "async" | "dry_run" | string;
+  status: NotificationDispatchStatus | string;
+  subjectOrTitle: string;
+  target: AdminNotificationTarget;
+  recipientSource: string | null;
+  recipientsCount: number;
+  totalDevices: number | null;
+  jobsQueued: number;
+  succeeded: number | null;
+  failed: number | null;
+  channels: Partial<Record<NotificationChannel, AdminChannelResult>> | null;
+  requestedBy: {
+    userId?: string;
+    email?: string | null;
+    role?: string;
+  } | null;
+  error: string | null;
+  createdAt: string;
+};
+
+export type AdminJobStatusResponse = {
+  success: boolean;
+  job: AdminHistoryItem;
+};

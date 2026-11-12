@@ -4,7 +4,6 @@ import { useAuth } from "../context/AuthContext";
 import Alert from "../components/ui/Alert";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
-import { Car } from "lucide-react";
 
 export default function LoginPage() {
   const { login, user } = useAuth();
@@ -37,16 +36,20 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-panel-50 px-4">
       <div className="w-full max-w-sm">
-        <div className="mb-6 flex flex-col items-center gap-2">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-panel-800 text-white">
-            <Car size={24} />
+        <div className="mb-6 flex flex-col items-center gap-3">
+          <img
+            src="/logo.png"
+            alt="YouConnext Logo"
+            className="h-16 w-16 object-contain drop-shadow-sm"
+          />
+          <div className="text-center">
+            <h1 className="text-xl font-bold text-panel-950">
+              YouConnext Admin
+            </h1>
+            <p className="text-sm text-gray-500">
+              Inicia sesión para acceder al panel
+            </p>
           </div>
-          <h1 className="text-xl font-semibold text-panel-900">
-            YouConnext Admin
-          </h1>
-          <p className="text-sm text-gray-500">
-            Inicia sesión para acceder al panel
-          </p>
         </div>
 
         <form

@@ -36,6 +36,18 @@ import type {
   UserUpdateInput,
   WalletConfig,
   WalletConfigInput,
+  AdminDispatchResult,
+  AdminEmailPayload,
+  AdminHistoryItem,
+  AdminJobStatusResponse,
+  AdminMultiChannelPayload,
+  AdminNotificationStatusResponse,
+  AdminPreviewResponse,
+  AdminPushPayload,
+  AdminRecipientsResponse,
+  EmailTemplateMeta,
+  NotificationCatalogItem,
+  NotificationChannel,
 } from "./types";
 
 export const api = {
@@ -724,6 +736,102 @@ export const api = {
         method: "DELETE",
         body: JSON.stringify({ deviceId }),
       }),
+  },
+
+  // ─── Admin Notifications (Notifications API) ───
+  notificaciones: {
+    status: (checkUserService = true) =>
+      http<AdminNotificationStatusResponse>(
+        "notifications",
+        `/api/admin/notifications/status${checkUserService ? "?checkUserService=true" : ""}`,
+      ),
+    catalog: () =>
+      http<{ types: NotificationCatalogItem[] }>(
+        "notifications",
+        "/api/notifications/catalog",
+      ),
+    emailTemplates: () =>
+      http<{ templates: EmailTemplateMeta[] }>(
+        "notifications",
+        "/api/emails/templates",
+      ),
+    recipients: (params?: {
+      page?: number;
+      limit?: number;
+      active?: boolean;
+      role?: string;
+      platform?: string;
+      search?: string;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.page) qs.set("page", String(params.page));
+      if (params?.limit) qs.set("limit", String(params.limit));
+      if (typeof params?.active === "boolean")
+        qs.set("active", String(params.active));
+      if (params?.role && params.role !== "all") qs.set("role", params.role);
+      if (params?.platform && params.platform !== "all")
+        qs.set("platform", params.platform);
+      if (params?.search?.trim()) qs.set("search", params.search.trim());
+      const query = qs.toString();
+      return http<AdminRecipientsResponse>(
+        "notifications",
+        `/api/admin/notifications/recipients${query ? `?${query}` : ""}`,
+      );
+    },
+    preview: (payload: {
+      target: AdminEmailPayload["target"];
+      channels?: NotificationChannel[];
+    }) =>
+      http<AdminPreviewResponse>(
+        "notifications",
+        "/api/admin/notifications/preview",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      ),
+    sendEmail: (payload: AdminEmailPayload) =>
+      http<AdminDispatchResult>(
+        "notifications",
+        "/api/admin/notifications/email",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      ),
+    sendPush: (payload: AdminPushPayload) =>
+      http<AdminDispatchResult>(
+        "notifications",
+        "/api/admin/notifications/push",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      ),
+    sendMulti: (payload: AdminMultiChannelPayload) =>
+      http<AdminDispatchResult>(
+        "notifications",
+        "/api/admin/notifications/send",
+        {
+          method: "POST",
+          body: JSON.stringify(payload),
+        },
+      ),
+    history: (params?: { limit?: number; kind?: string }) => {
+      const qs = new URLSearchParams();
+      if (params?.limit) qs.set("limit", String(params.limit));
+      if (params?.kind && params.kind !== "all") qs.set("kind", params.kind);
+      const query = qs.toString();
+      return http<{ success: boolean; total: number; items: AdminHistoryItem[] }>(
+        "notifications",
+        `/api/admin/notifications/history${query ? `?${query}` : ""}`,
+      );
+    },
+    jobStatus: (batchId: string) =>
+      http<AdminJobStatusResponse>(
+        "notifications",
+        `/api/admin/notifications/jobs/${encodeURIComponent(batchId)}`,
+      ),
   },
 
   // ─── CAEs (Travels API) ───
