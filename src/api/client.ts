@@ -1,4 +1,5 @@
 import { http, httpBlob, HttpError } from "./http";
+import { feedbackAdminApi } from "../features/feedback/services/feedbackAdminApi";
 import type {
   CaeReport,
   CaeReportStatus,
@@ -913,4 +914,7 @@ export const api = {
         { method: "DELETE" },
       ),
   },
+
+  // ─── Feedback & Sugerencias (Users API) ───
+  feedback: feedbackAdminApi,
 };

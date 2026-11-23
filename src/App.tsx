@@ -13,6 +13,7 @@ import EventDetailPage from "./pages/EventDetailPage";
 import OrganizationsPage from "./pages/OrganizationsPage";
 import OrganizationDetailPage from "./pages/OrganizationDetailPage";
 import SuggestionsPage from "./pages/SuggestionsPage";
+import FeedbackPage from "./pages/FeedbackPage";
 import CaesPage from "./pages/CaesPage";
 import NotificationsPage from "./pages/NotificationsPage";
 
@@ -53,6 +54,7 @@ export default function App() {
         <Route path="/empresas" element={<Navigate to="/organizaciones" replace />} />
         <Route path="/empresas/:id" element={<LegacyCompanyRedirect />} />
 
+        <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/sugerencias" element={<SuggestionsPage />} />
         <Route path="/caes" element={<CaesPage />} />
         <Route path="/notificaciones" element={<NotificationsPage />} />

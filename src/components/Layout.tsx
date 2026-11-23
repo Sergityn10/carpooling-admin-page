@@ -6,6 +6,7 @@ import {
   FileCheck,
   Lightbulb,
   LogOut,
+  MessageSquareQuote,
   Route as RouteIcon,
   Users,
 } from "lucide-react";
@@ -94,6 +95,20 @@ export default function Layout() {
             >
               <Building2 size={16} />
               Organizaciones
+            </NavLink>
+
+            <NavLink
+              to="/feedback"
+              className={({ isActive }) =>
+                clsx(
+                  navItemBase,
+                  isActive ? "bg-panel-100 text-panel-900" : "text-gray-700",
+                  "mt-1",
+                )
+              }
+            >
+              <MessageSquareQuote size={16} />
+              Feedback
             </NavLink>
 
             <NavLink
