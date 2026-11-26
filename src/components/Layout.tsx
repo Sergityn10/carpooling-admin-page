@@ -7,6 +7,7 @@ import {
   Lightbulb,
   LogOut,
   MessageSquareQuote,
+  Radar,
   Route as RouteIcon,
   Users,
 } from "lucide-react";
@@ -137,6 +138,20 @@ export default function Layout() {
             >
               <FileCheck size={16} />
               Informes CAE
+            </NavLink>
+
+            <NavLink
+              to="/espacial"
+              className={({ isActive }) =>
+                clsx(
+                  navItemBase,
+                  isActive ? "bg-panel-100 text-panel-900" : "text-gray-700",
+                  "mt-1",
+                )
+              }
+            >
+              <Radar size={16} />
+              Validación espacial
             </NavLink>
 
             <NavLink

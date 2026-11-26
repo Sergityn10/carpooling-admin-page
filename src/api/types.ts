@@ -366,6 +366,13 @@ export type DeviceToken = {
 
 export type CaeStatus = "pending" | "in_review" | "canceled" | "completed";
 
+export type SpatialCaeValidationStatus =
+  | "PENDING"
+  | "OK"
+  | "WARNING"
+  | "FAILED"
+  | "NO_DATA";
+
 export type InfoCAE = {
   id: string;
   id_trayecto: string;
@@ -378,6 +385,9 @@ export type InfoCAE = {
   kwh_generated?: number;
   eur_generated?: number;
   status: CaeStatus;
+  spatial_validation_status?: SpatialCaeValidationStatus;
+  spatial_validation_notes?: string | null;
+  has_spatial_failure?: boolean;
   created_at?: string;
   updated_at?: string;
 };
@@ -822,6 +832,142 @@ export type AdminHistoryItem = {
 export type AdminJobStatusResponse = {
   success: boolean;
   job: AdminHistoryItem;
+};
+
+// ─── Spatial Validation & LineStrings (Travels API - Admin) ───
+
+export type SpatialRole = "DRIVER" | "PASSENGER";
+
+export type SpatialMatchStatus =
+  | "MATCHED"
+  | "NOT_MATCHED"
+  | "INSUFFICIENT_DATA"
+  | "ERROR";
+
+export type GeoJsonPosition = [number, number] | [number, number, number];
+
+export type GeoJsonGeometry =
+  | { type: "Point"; coordinates: GeoJsonPosition }
+  | { type: "MultiPoint"; coordinates: GeoJsonPosition[] }
+  | { type: "LineString"; coordinates: GeoJsonPosition[] }
+  | { type: "MultiLineString"; coordinates: GeoJsonPosition[][] }
+  | { type: "Polygon"; coordinates: GeoJsonPosition[][] }
+  | { type: "MultiPolygon"; coordinates: GeoJsonPosition[][][] }
+  | { type: "GeometryCollection"; geometries: GeoJsonGeometry[] };
+
+export type SpatialConfigKey =
+  | "spatial_buffer_meters"
+  | "spatial_min_overlap_percentage"
+  | "spatial_min_points"
+  | "spatial_min_shared_distance_meters"
+  | "spatial_cae_require_match";
+
+export type SpatialConfigValues = {
+  spatial_buffer_meters: number;
+  spatial_min_overlap_percentage: number;
+  spatial_min_points: number;
+  spatial_min_shared_distance_meters: number;
+  spatial_cae_require_match: boolean;
+};
+
+export type SpatialConfigUpdateInput = Partial<SpatialConfigValues>;
+
+export type SpatialConfigItem = {
+  config_key: SpatialConfigKey;
+  value: number | boolean;
+  value_type: "number" | "boolean";
+  source: "db" | "env" | "default";
+  description: string;
+  updated_at: string | null;
+};
+
+export type TrayectoLineStringItem = {
+  id: string;
+  id_trayecto: string;
+  user_id: string;
+  role: SpatialRole | string;
+  id_reserva?: string | null;
+  geojson: GeoJsonGeometry | null;
+  encoded_polyline?: string | null;
+  points_count: number;
+  distance_km: number;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type TrayectoCoincidenciaItem = {
+  id?: string;
+  id_trayecto?: string;
+  conductor_id?: string;
+  pasajero_id: string;
+  id_reserva?: string | null;
+  driver_linestring_id?: string | null;
+  passenger_linestring_id?: string | null;
+  is_match: boolean;
+  status: SpatialMatchStatus | string;
+  failure_reason?: string | null;
+  overlap_percentage?: number;
+  metros_ruta_pasajero?: number;
+  metros_coincidentes?: number;
+  metros_ruta_conductor?: number;
+  buffer_meters_used?: number;
+  min_overlap_pct_used?: number;
+  pasillo_geojson?: GeoJsonGeometry | null;
+  tramo_coincidente_geojson?: GeoJsonGeometry | null;
+  passenger_linestring?: TrayectoLineStringItem | null;
+  created_at?: string;
+  updated_at?: string;
+};
+
+export type SpatialReviewResponse = {
+  status: string;
+  trayecto: Trayecto;
+  has_failures: boolean;
+  failures_count: number;
+  current_config: SpatialConfigValues;
+  cae: {
+    id: string;
+    status: CaeStatus | string | null;
+    spatial_validation_status: SpatialCaeValidationStatus | string;
+    spatial_validation_notes?: string | null;
+    km_recorridos?: number;
+    km_with_company?: number;
+    kwh_generated?: number;
+    eur_generated?: number;
+  } | null;
+  driver: {
+    user_id: string;
+    linestring: TrayectoLineStringItem | null;
+  };
+  passengers: TrayectoCoincidenciaItem[];
+};
+
+export type SpatialRecalculateResponse = {
+  status: string;
+  message: string;
+  config_used: SpatialConfigValues;
+  validation_status: SpatialCaeValidationStatus | string;
+  summary_notes?: string | null;
+  matches: TrayectoCoincidenciaItem[];
+  cae_recalculation: {
+    updated: boolean;
+    reason?: string | null;
+    spatial_validation_status?: SpatialCaeValidationStatus | string | null;
+    km_with_company?: number | null;
+  } | null;
+};
+
+export type SpatialFailureListItem = TrayectoCoincidenciaItem & {
+  trayecto?: Pick<
+    Trayecto,
+    "id" | "origen" | "destino" | "hora" | "conductor" | "status"
+  > | null;
+  cae?: {
+    id: string;
+    id_trayecto: string;
+    spatial_validation_status: SpatialCaeValidationStatus | string;
+    spatial_validation_notes?: string | null;
+  } | null;
 };
 
 export * from "../features/feedback/types/feedback.types";

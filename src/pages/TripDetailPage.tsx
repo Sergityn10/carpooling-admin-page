@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useParams } from "react-router-dom";
+import { Link, useLocation, useParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { RecorridoPunto, ReservaStatus } from "../api/types";
+import SpatialReviewPanel from "../components/spatial/SpatialReviewPanel";
 import TripMap from "../components/TripMap";
 import TripEventsTimeline from "../components/TripEventsTimeline";
 import Alert from "../components/ui/Alert";
@@ -23,6 +24,7 @@ const RESERVA_STATUS_COLORS: Record<string, string> = {
 
 export default function TripDetailPage() {
   const { id } = useParams();
+  const location = useLocation();
 
   const viajeQuery = useQuery({
     queryKey: ["viaje-admin", id],
@@ -71,6 +73,14 @@ export default function TripDetailPage() {
     const arr = recorridoQuery.data?.recorridos ?? [];
     return arr.map(toLatLng);
   }, [recorridoQuery.data]);
+
+  useEffect(() => {
+    if (location.hash !== "#spatial-review" || viajeQuery.isLoading) return;
+    const el = document.getElementById("spatial-review");
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [location.hash, viajeQuery.isLoading]);
 
   if (!id) {
     return (
@@ -169,6 +179,8 @@ export default function TripDetailPage() {
       </Card>
 
       <TripEventsTimeline tripId={id} />
+
+      <SpatialReviewPanel tripId={id} />
 
       <Card>
         <CardTitle>Reservas</CardTitle>

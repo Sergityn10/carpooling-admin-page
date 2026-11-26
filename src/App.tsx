@@ -16,6 +16,7 @@ import SuggestionsPage from "./pages/SuggestionsPage";
 import FeedbackPage from "./pages/FeedbackPage";
 import CaesPage from "./pages/CaesPage";
 import NotificationsPage from "./pages/NotificationsPage";
+import SpatialValidationPage from "./pages/SpatialValidationPage";
 
 function LegacyCompanyRedirect() {
   const { id } = useParams();
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="/feedback" element={<FeedbackPage />} />
         <Route path="/sugerencias" element={<SuggestionsPage />} />
         <Route path="/caes" element={<CaesPage />} />
+        <Route path="/espacial" element={<SpatialValidationPage />} />
         <Route path="/notificaciones" element={<NotificationsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/login" replace />} />

@@ -49,6 +49,13 @@ import type {
   EmailTemplateMeta,
   NotificationCatalogItem,
   NotificationChannel,
+  SpatialConfigItem,
+  SpatialConfigUpdateInput,
+  SpatialConfigValues,
+  SpatialFailureListItem,
+  SpatialMatchStatus,
+  SpatialRecalculateResponse,
+  SpatialReviewResponse,
 } from "./types";
 
 export const api = {
@@ -912,6 +919,63 @@ export const api = {
         "travels",
         `/api/cae/reports/${encodeURIComponent(id)}`,
         { method: "DELETE" },
+      ),
+  },
+
+  // ─── Validación Espacial & LineStrings (Travels API - Admin) ───
+  espacial: {
+    getConfig: () =>
+      http<{
+        status: string;
+        config: SpatialConfigValues;
+        items: SpatialConfigItem[];
+      }>("travels", "/api/admin/spatial-config"),
+
+    updateConfig: (data: SpatialConfigUpdateInput) =>
+      http<{
+        status: string;
+        message: string;
+        config: SpatialConfigValues;
+        items: SpatialConfigItem[];
+      }>("travels", "/api/admin/spatial-config", {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      }),
+
+    listFailures: (params?: {
+      status?: SpatialMatchStatus | string;
+      id_trayecto?: string;
+      page?: number;
+      limit?: number;
+    }) => {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set("status", params.status);
+      if (params?.id_trayecto?.trim())
+        qs.set("id_trayecto", params.id_trayecto.trim());
+      if (params?.page) qs.set("page", String(params.page));
+      if (params?.limit) qs.set("limit", String(params.limit));
+      const query = qs.toString();
+      return http<{
+        status: string;
+        data: SpatialFailureListItem[];
+        pagination: Pagination & { hasNextPage?: boolean; hasPrevPage?: boolean };
+      }>("travels", `/api/admin/spatial-failures${query ? `?${query}` : ""}`);
+    },
+
+    getTripReview: (trayectoId: string) =>
+      http<SpatialReviewResponse>(
+        "travels",
+        `/api/admin/trayectos/${encodeURIComponent(trayectoId)}/spatial-review`,
+      ),
+
+    recalculateTrip: (trayectoId: string, recalculate_cae = true) =>
+      http<SpatialRecalculateResponse>(
+        "travels",
+        `/api/admin/trayectos/${encodeURIComponent(trayectoId)}/spatial-recalculate`,
+        {
+          method: "POST",
+          body: JSON.stringify({ recalculate_cae }),
+        },
       ),
   },
 

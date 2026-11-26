@@ -19,3 +19,13 @@ export function formatKm(km?: number | null) {
   if (km === null || km === undefined) return "-";
   return `${Math.round(km * 100) / 100} km`;
 }
+
+export function formatMeters(meters?: number | null) {
+  if (meters === null || meters === undefined || !Number.isFinite(meters)) {
+    return "-";
+  }
+  if (meters >= 1000) {
+    return `${Math.round((meters / 1000) * 100) / 100} km`;
+  }
+  return `${Math.round(meters)} m`;
+}

@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { Download, FilePlus, Trash2 } from "lucide-react";
+import { Download, FilePlus, MapPin, Trash2 } from "lucide-react";
 import { api } from "../api/client";
 import type { CaeReportStatus, CaeStatus, InfoCAE } from "../api/types";
+import SpatialStatusBadge from "../components/spatial/SpatialStatusBadge";
 import Alert from "../components/ui/Alert";
 import { Card, CardSubtitle, CardTitle } from "../components/ui/Card";
 import Input from "../components/ui/Input";
@@ -35,6 +36,15 @@ const REPORT_STATUS_COLORS: Record<CaeReportStatus, string> = {
   sent: "bg-blue-100 text-blue-700",
   reviewed: "bg-green-100 text-green-700",
 };
+
+function hasCaeSpatialAlert(cae: InfoCAE) {
+  return (
+    Boolean(cae.has_spatial_failure) ||
+    cae.spatial_validation_status === "FAILED" ||
+    cae.spatial_validation_status === "WARNING" ||
+    cae.spatial_validation_status === "NO_DATA"
+  );
+}
 
 function matchesCae(cae: InfoCAE, q: string) {
   const query = q.trim().toLowerCase();
@@ -94,6 +104,7 @@ export default function CaesPage() {
       queryClient.invalidateQueries({ queryKey: ["caes"] });
       queryClient.invalidateQueries({ queryKey: ["cae-summary"] });
     },
+    onError: (err: Error) => setActionError(err.message),
   });
 
   const createReportMutation = useMutation({
@@ -447,6 +458,7 @@ export default function CaesPage() {
                 <Th className="text-right">kWh</Th>
                 <Th className="text-right">EUR</Th>
                 <Th>Estado</Th>
+                <Th>Validación espacial</Th>
                 <Th>Fecha</Th>
                 <Th className="text-right">Acciones</Th>
               </tr>
@@ -498,6 +510,33 @@ export default function CaesPage() {
                       {STATUS_LABELS[cae.status]}
                     </span>
                   </Td>
+                  <Td>
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <SpatialStatusBadge
+                          type="cae"
+                          status={cae.spatial_validation_status ?? "PENDING"}
+                          title={cae.spatial_validation_notes ?? undefined}
+                        />
+                        <Link
+                          to={`/viajes/${cae.id_trayecto}#spatial-review`}
+                          className="inline-flex items-center gap-1 text-xs font-medium text-panel-900 hover:underline"
+                          title="Abrir revisión espacial y mapa de pasillo"
+                        >
+                          <MapPin size={12} />
+                          Revisar mapa
+                        </Link>
+                      </div>
+                      {cae.spatial_validation_notes ? (
+                        <div
+                          className="max-w-[220px] truncate text-xs text-gray-500"
+                          title={cae.spatial_validation_notes}
+                        >
+                          {cae.spatial_validation_notes}
+                        </div>
+                      ) : null}
+                    </div>
+                  </Td>
                   <Td className="text-gray-600">
                     {formatDateTime(cae.created_at)}
                   </Td>
@@ -505,15 +544,24 @@ export default function CaesPage() {
                     {cae.status === "in_review" ? (
                       <button
                         onClick={() => {
-                          if (
-                            confirm(
-                              "¿Aprobar este informe CAE? Pasará a completado y el dinero será disponible para el conductor.",
-                            )
-                          )
+                          const hasAlert = hasCaeSpatialAlert(cae);
+                          const confirmMessage = hasAlert
+                            ? `ATENCIÓN: Este CAE tiene validación espacial "${cae.spatial_validation_status ?? "CON INCIDENCIA"}"${
+                                cae.spatial_validation_notes
+                                  ? ` (${cae.spatial_validation_notes})`
+                                  : ""
+                              }.\n\nSe recomienda revisar el mapa antes de aprobar.\n¿Seguro que deseas aprobar este informe CAE igualmente? Pasará a completado y el dinero será disponible para el conductor.`
+                            : "¿Aprobar este informe CAE? Pasará a completado y el dinero será disponible para el conductor.";
+                          if (confirm(confirmMessage)) {
                             approveMutation.mutate(cae.id);
+                          }
                         }}
                         disabled={approveMutation.isPending}
-                        className="text-xs font-medium text-green-600 hover:text-green-700 disabled:opacity-50"
+                        className={`text-xs font-medium disabled:opacity-50 ${
+                          hasCaeSpatialAlert(cae)
+                            ? "text-amber-700 hover:text-amber-800"
+                            : "text-green-600 hover:text-green-700"
+                        }`}
                       >
                         Aprobar
                       </button>
@@ -526,7 +574,7 @@ export default function CaesPage() {
 
               {filtered.length === 0 ? (
                 <tr>
-                  <Td className="py-8 text-center text-gray-600" colSpan={10}>
+                  <Td className="py-8 text-center text-gray-600" colSpan={11}>
                     Sin resultados
                   </Td>
                 </tr>
